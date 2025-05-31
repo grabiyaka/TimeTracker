@@ -20,6 +20,15 @@ if (Test-Path $keysPath) {
     Write-Warning "Файл keys.ps1 не найден! Переменные с секретами не загружены."
 }
 
+$global:isPaused = $false
+
+$pauseButton = New-Object System.Windows.Forms.Button
+$pauseButton.Text = "Пауза"
+$pauseButton.Dock = 'Bottom'
+$pauseButton.Height = 30
+$form.Controls.Add($pauseButton)
+
+
 # Глобальная переменная для времени, чтобы было видно внутри обработчика
 $global:elapsed = 0
 
@@ -28,13 +37,27 @@ $global:timer = New-Object System.Windows.Forms.Timer
 $global:timer.Interval = 1000 # 1 секунда
 
 $global:timer.Add_Tick({
-    $minutes = [math]::Floor($global:elapsed / 60)
-    $seconds = $global:elapsed % 60
-    $minStr = $minutes.ToString("00")
-    $secStr = $seconds.ToString("00")
-    $label.Text = "$minStr`:$secStr"
-    $global:elapsed++
+    if (-not $global:isPaused) {
+        $minutes = [math]::Floor($global:elapsed / 60)
+        $seconds = $global:elapsed % 60
+        $minStr = $minutes.ToString("00")
+        $secStr = $seconds.ToString("00")
+        $label.Text = "$minStr`:$secStr"
+        $global:elapsed++
+    }
 })
+
+$pauseButton.Add_Click({
+    if ($global:isPaused) {
+        $global:isPaused = $false
+        $pauseButton.Text = "Пауза"
+    } else {
+        $global:isPaused = $true
+        $pauseButton.Text = "Продолжить"
+    }
+})
+
+
 
 # Запускаем таймер
 $global:timer.Start()
@@ -163,8 +186,13 @@ function Main {
     $screenShotTimer = New-Object System.Windows.Forms.Timer
     $screenShotTimer.Interval = (Get-Random -Minimum 60000 -Maximum 600000)
     $screenShotTimer.Add_Tick({
-        Random-Screenshot
-        $screenShotTimer.Interval = (Get-Random -Minimum 60000 -Maximum 600000)
+        if (-not $global:isPaused) {
+            Random-Screenshot
+            $screenShotTimer.Interval = (Get-Random -Minimum 60000 -Maximum 600000)
+        } else {
+            Write-Host "Screenshot skipped, timer paused"
+        }
+        
     })
     $screenShotTimer.Start()
 
